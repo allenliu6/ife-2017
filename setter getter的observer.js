@@ -1,3 +1,21 @@
+var Observer = function(obj){
+	this.data = {}
+	for(let key of Object.keys(obj)){
+		Object.defineProperty(this.data, key, {
+			enumerable: true,
+        		configurable: true,
+			get: function(){
+				console.log(`你访问了 ${key}`)
+				return obj[key]
+			},
+			set: function(val){
+				console.log(`你设置了 ${key}，新的值为${val}`)
+			}
+		})
+	}
+	return this
+}
+
 let app1 = new Observer({
   name: 'youngwind',
   age: 25
@@ -15,20 +33,3 @@ app2.data.university // 你访问了 university
 app2.data.major = 'science'  // 你设置了 major，新的值为 science
 
 
-var Observer = function(obj){
-	this.data = {}
-	for(let key of Object.keys(obj)){
-		Object.defineProperty(this.data, key, {
-			enumerable: true,
-        	configurable: true,
-			get: function(){
-				console.log(`你访问了 ${key}`)
-				return obj[key]
-			},
-			set: function(val){
-				console.log(`你设置了 ${key}，新的值为${val}`)
-			}
-		})
-	}
-	return this
-}
