@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title></title>
+</head>
+<body>
+<div id="app">
+    <p>姓名：{{user.name}}</p>
+    <p>年龄：{{user.age}}</p>
+</div>
+
+
+<script>
+	let Vue = function(options){
+		this.elem = document.querySelector(options.el)
+		this.ob = new Observer(options.data)
+		let arr = this.elem.innerHTML.split('{{'),
+			compile = {}
+		for(let i = 1; i < arr.length; i += 2){
+			let str = arr[i].split('}}')
+			compile[i] = str[0]
+			arr.splice(i, 1, str[0], str[1])
+		}
+		
+		for(let val of Object.keys(compile)){
+			let compileArr = compile[val].split('.'),
+				res = this.ob.data
+			for(let val2 of compileArr){
+				res = res[val2]
+			}
+			arr[val] = res
+		}
+
+		console.log(compile, arr)
+		this.elem.innerHTML = arr.join('')
+	}
+
+	let Observer = function(options, parent = null){
+		this.data = options
+		this.parent = parent
+		this.event = {}
+		for(let key of Object.keys(options)){
+			if (typeof options[key] === 'object' && options[key] instanceof Object) {
+				new Observer(options[key], this)
+			}
+			this.defineSetget(key, options[key])
+		}
+	}
+
+	Observer.prototype.defineSetget = function(key, val){//callback不好
+		let self = this
+		Object.defineProperty(this.data, key, {
+			get: function(){
+				console.log(`你访问了${key}`)
+				return val
+			},
+			set: function(newVal){
+				val = newVal
+				if (typeof val === 'object' && val instanceof Object) {
+					new Observer(val)
+				}
+				self.emit()
+			}
+		})
+	}
+
+	Observer.prototype.$watch = function(key, fn){
+		this.event['set'] = this.event['set'] || []
+		this.event['set'].push(fn)
+	}
+
+	Observer.prototype.emit = function(){
+		if (this.event['set'] && this.event['set'].length) {
+			for(let fn of this.event['set']){
+				fn()
+			}
+		}
+		if (this.parent) {
+			this.parent.emit()
+		}
+	}
+</script>
+<script>
+	let app = new Vue({
+	  el: '#app',
+	  data: {
+	    user: {
+	      name: 'youngwind',
+	      age: 25
+	    }
+	  }
+	});
+</script>
+</body>
+</html>
