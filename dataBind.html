@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>哈哈</title>
+</head>
+<body>
+<div id="app">
+    <p>姓名：{{user.name}}</p>{{major}}
+    <p>年龄：{{user.age}}</p>
+</div>
+
+
+<script>
+	/*
+		directive = {
+			keys: {
+					dom: element
+					inner: ''				
+			}
+		}
+
+		一个元素内多个绑定有bug
+	*/
+	let Vue = function(options){
+		this.elem = document.querySelector(options.el)
+		this.ob = new Observer(options.data)
+		this.data = options.data
+		this.directive = {}
+		this.direct()
+		this.compile()
+	}
+	
+	Vue.prototype.compile = function(target){//正则处理字符串得到{{}}内数据的过程重复 
+		if (typeof target === 'undefined') {
+			for(let key of Object.keys(this.directive)){
+				let val = this.findChild(key),
+					inner = this.directive[key].inner,
+					dom = this.directive[key].dom
+
+				inner = inner.replace('{{' + key + '}}', val)
+				if (dom.nodeType === 1) {
+					dom.innerHTML = inner
+				}else if (dom.nodeType === 3) {
+					dom.data = inner
+				}
+			}
+		}else{
+			let val = this.findChild(target),
+				inner = this.directive[target].inner,
+				dom = this.directive[key].dom
+
+			inner = inner.replace('{{' + target + '}}', val)
+			if (dom.nodeType === 1) {
+				dom.innerHTML = inner
+			}else if (dom.nodeType === 3) {
+				dom.data = inner
+			}
+		}	
+	}
+
+	Vue.prototype.findChild = function(keys){
+		let keyArr = keys.split('.'),
+			res = this.ob.data;
+		for(let key of [...keyArr]){
+			res = res[key]
+		}
+		return res
+	}
+
+	Vue.prototype.direct = function(){
+		let elem = this.elem,
+			children = this.elem.childNodes,
+			fn = function(){
+				let self = this
+				return function(key){
+					console.log('我要开始渲染了')
+					self.compile(key)
+				}
+			}
+
+		fn = fn.call(this)
+
+		for(let child of children){
+			let text = child.innerHTML || child.data,
+				array = text.match(/{{(.*?)}}/g)
+
+			console.log(text)
+			if (!array) {
+				continue
+			}
+			for(let i = 0,l = array.length; i < l; i++){
+				array[i] = array[i].slice(2)
+				array[i] = array[i].slice(0, array[i].length-2)
+
+				this.directive[array[i]] = {
+					dom: child,
+					inner: text
+				}
+
+				//在最高层检测属性变化
+				this.ob.$watch(array[i], fn)
+			}
+		}
+	}
+
+	let Observer = function(options, parent = null){
+		this.data = options
+		this.parent = parent
+		this.event = {}
+		this.children = {}
+		for(let key of Object.keys(options)){
+			if (typeof options[key] === 'object' && options[key] instanceof Object){
+				this.children[key] = new Observer(options[key], this)
+			}
+			this.defineSetget(key, options[key])
+		}
+	}
+
+	Observer.prototype.defineSetget = function(key, val){
+		let self = this
+		Object.defineProperty(this.data, key, {//里面this为this.data
+			get: function(){
+				return val
+			},
+			set: function(newVal){
+				if (newVal === val) return
+				val = newVal
+				if (typeof val === 'object' && val instanceof Object) {
+					self.children[key] = new Observer(val, self)
+				}
+				self.emit(key)
+			}
+		})
+	}
+
+	Observer.prototype.$watch = function(key, fn){
+		this.event['set'] = this.event['set'] || {}
+		this.event['set'][key] = this.event['set'][key] || []
+		this.event['set'][key].push(fn)
+	}
+
+	Observer.prototype.emit = function(key){
+		if (this.event['set'] && this.event['set'][key]) {
+			for(let fn of this.event['set'][key]){
+				fn(key)
+			}
+		}
+		if (this.parent) {
+			for(let name of Object.keys(this.parent.children)){
+				if (this.parent.children[name] === this) {
+					key = name + '.' + key
+				}
+			}
+			return this.parent.emit(key)
+		}
+	}
+
+</script>
+<script>
+	let app = new Vue({
+	  el: '#app',
+	  data: {
+	    user: {
+	      name: 'youngwind',
+	      age: 25
+	    },
+	    school: 'bupt',
+	    major: 'computer'
+	  }
+	});
+</script>
+</body>
+</html>
